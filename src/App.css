@@ -1,0 +1,23 @@
+
+/* Remove redundant styles that are now handled by Tailwind */
+
+body {
+  transition: background-color 0.3s ease;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus styles */
+:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Selection styles */
+::selection {
+  background-color: hsl(var(--primary) / 30%);
+  color: hsl(var(--primary));
+}
