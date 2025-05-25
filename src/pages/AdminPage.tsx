@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useWallet } from '@/hooks/use-wallet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Book, BorrowHistory } from '@/types/book';
-import { BlockchainService } from '@/services/mockBlockchain';
+import { getBooks, addBook, updateBook, deleteBook, getBorrowHistory, isAdmin, getAllUsers } from '@/services/blockchainService';
 import { toast } from 'sonner';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import UserManagement from '@/components/admin/UserManagement';
@@ -19,24 +19,41 @@ interface User {
 }
 
 const AdminPage: React.FC = () => {
-  const { connected } = useWallet();
+  const { connected, address } = useWallet();
+  const [admin, setAdmin] = useState<boolean | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [borrowHistory, setBorrowHistory] = useState<BorrowHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (connected) {
+    const checkAdmin = async () => {
+      if (connected && address) {
+        try {
+          const result = await isAdmin(address);
+          setAdmin(result);
+        } catch {
+          setAdmin(false);
+        }
+      } else {
+        setAdmin(null);
+      }
+    };
+    checkAdmin();
+  }, [connected, address]);
+
+  useEffect(() => {
+    if (connected && admin) {
       fetchBooks();
       fetchUsers();
       fetchBorrowHistory();
     }
-  }, [connected]);
+  }, [connected, admin]);
 
   const fetchBooks = async () => {
     setLoading(true);
     try {
-      const booksData = await BlockchainService.getBooks();
+      const { books: booksData } = await getBooks();
       setBooks(booksData);
     } catch (error) {
       console.error("Error fetching books:", error);
@@ -48,18 +65,14 @@ const AdminPage: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      // In a real application, this would fetch from the blockchain
-      const mockUsers: User[] = [
-        {
-          address: "0x123...abc",
-          isAdmin: true,
-          totalBorrowed: 5,
-          currentlyBorrowed: 2,
-          lastActive: new Date()
-        },
-        // Add more mock users as needed
-      ];
-      setUsers(mockUsers);
+      const userAddresses = await getAllUsers();
+      setUsers(userAddresses.map(address => ({
+        address,
+        isAdmin: false, // Optionally fetch admin status
+        totalBorrowed: 0, // Optionally fetch/calculate
+        currentlyBorrowed: 0, // Optionally fetch/calculate
+        lastActive: new Date(), // Optionally fetch/calculate
+      })));
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to fetch users");
@@ -68,7 +81,7 @@ const AdminPage: React.FC = () => {
 
   const fetchBorrowHistory = async () => {
     try {
-      const history = await BlockchainService.getBorrowHistory();
+      const history = await getBorrowHistory();
       setBorrowHistory(history);
     } catch (error) {
       console.error("Error fetching borrow history:", error);
@@ -78,7 +91,7 @@ const AdminPage: React.FC = () => {
 
   const handleAddBook = async (bookData: Omit<Book, 'id' | 'available' | 'borrower'>) => {
     try {
-      await BlockchainService.addBook({
+      await addBook({
         ...bookData,
         available: true
       });
@@ -93,7 +106,7 @@ const AdminPage: React.FC = () => {
 
   const handleEditBook = async (id: string, bookData: Partial<Book>) => {
     try {
-      await BlockchainService.updateBook(id, bookData);
+      await updateBook(id, bookData);
       toast.success("Book updated successfully");
       await fetchBooks();
     } catch (error) {
@@ -105,7 +118,7 @@ const AdminPage: React.FC = () => {
 
   const handleDeleteBook = async (id: string) => {
     try {
-      await BlockchainService.deleteBook(id);
+      await deleteBook(id);
       toast.success("Book deleted successfully");
       await fetchBooks();
     } catch (error) {
@@ -116,26 +129,15 @@ const AdminPage: React.FC = () => {
   };
 
   const handleAddUser = async (address: string, isAdmin: boolean) => {
-    // In a real application, this would interact with the blockchain
-    const newUser: User = {
-      address,
-      isAdmin,
-      totalBorrowed: 0,
-      currentlyBorrowed: 0,
-      lastActive: new Date()
-    };
-    
-    setUsers(prev => [...prev, newUser]);
-    return Promise.resolve();
+    // Decentralized: Implement user addition via smart contract or decentralized identity
+    // Placeholder: Remove mock logic, ensure only decentralized logic is used
+    return Promise.reject("User management must be implemented via decentralized service");
   };
 
   const handleToggleAdmin = async (address: string) => {
-    setUsers(prev => prev.map(user => 
-      user.address === address 
-        ? { ...user, isAdmin: !user.isAdmin }
-        : user
-    ));
-    return Promise.resolve();
+    // Decentralized: Implement admin toggle via smart contract
+    // Placeholder: Remove mock logic, ensure only decentralized logic is used
+    return Promise.reject("Admin toggle must be implemented via decentralized service");
   };
 
   if (!connected) {
@@ -148,6 +150,33 @@ const AdminPage: React.FC = () => {
           <p className="text-library-muted">
             Please connect your wallet to access the admin panel.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (admin === false) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-library-text mb-4">
+            Access Denied
+          </h2>
+          <p className="text-library-muted">
+            You do not have permission to access the admin panel.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (admin === null) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-library-text mb-4">
+            Checking admin status...
+          </h2>
         </div>
       </div>
     );
@@ -189,7 +218,6 @@ const AdminPage: React.FC = () => {
             users={users}
             isLoading={loading}
             onAddUser={handleAddUser}
-            onToggleAdmin={handleToggleAdmin}
           />
         </TabsContent>
         

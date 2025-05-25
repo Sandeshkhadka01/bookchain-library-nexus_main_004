@@ -45,10 +45,12 @@ const BookManagement = ({
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
 
+  const safeToLower = (val: string | undefined | null) => (val ? val.toLowerCase() : '');
+
   React.useEffect(() => {
     const filtered = books.filter(book => 
-      book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      safeToLower(book.title).includes(safeToLower(searchTerm)) ||
+      safeToLower(book.author).includes(safeToLower(searchTerm)) ||
       book.isbn.includes(searchTerm)
     );
     setFilteredBooks(filtered);
@@ -124,7 +126,8 @@ const BookManagement = ({
                 onSubmit={async (bookData: BookFormData) => {
                   await onAddBook({
                     ...bookData,
-                    availableCopies: bookData.quantity
+                    availableCopies: bookData.quantity,
+                    metadataUrl: bookData.metadataUrl,
                   });
                   setIsAddDialogOpen(false);
                 }}
@@ -208,6 +211,21 @@ const BookManagement = ({
                       >
                         <History className="h-4 w-4" />
                       </Button>
+                      {book.metadataUrl && (
+                        <a
+                          href={book.metadataUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="View IPFS Metadata"
+                          className="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 transition-colors"
+                          style={{ lineHeight: 0 }}
+                        >
+                          <span className="sr-only">View IPFS Metadata</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-blue-600">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6A2.25 2.25 0 005.25 5.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M18 12l-6-6m0 0l6 6m-6-6v12" />
+                          </svg>
+                        </a>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -229,7 +247,10 @@ const BookManagement = ({
             <AddEditBookForm
               book={selectedBook}
               onSubmit={async (bookData) => {
-                await onEditBook(selectedBook.id, bookData);
+                await onEditBook(selectedBook.id, {
+                  ...bookData,
+                  metadataUrl: bookData.metadataUrl,
+                });
                 setIsEditDialogOpen(false);
                 setSelectedBook(null);
               }}

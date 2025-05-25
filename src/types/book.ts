@@ -12,9 +12,12 @@ export interface Book {
     address: string;
     borrowDate: Date;
   }>;
+  metadataUrl?: string; // IPFS metadata URL
 }
 
-export type BookFormData = Omit<Book, 'id' | 'availableCopies' | 'borrowers'>;
+export type BookFormData = Omit<Book, 'id' | 'availableCopies' | 'borrowers'> & {
+  metadataUrl?: string;
+};
 
 export interface BookData {
   title: string;

@@ -1,6 +1,6 @@
-
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { isUser, register } from '@/services/blockchainService';
 
 interface WalletContextType {
   connected: boolean;
@@ -32,6 +32,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [balance, setBalance] = useState('0');
   const [chainId, setChainId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const hasAttemptedRegister = React.useRef<string | null>(null);
   
   const checkIfWalletIsConnected = async () => {
     try {
@@ -111,6 +112,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setBalance('0');
     setChainId(null);
     setIsAdmin(false);
+    hasAttemptedRegister.current = null;
     toast.info("Wallet disconnected");
   };
   
@@ -119,12 +121,27 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     
     const { ethereum } = window as any;
     if (ethereum) {
-      ethereum.on('accountsChanged', (accounts: string[]) => {
+      ethereum.on('accountsChanged', async (accounts: string[]) => {
         if (accounts.length > 0) {
           setAddress(accounts[0]);
+          setConnected(true);
+          // Re-fetch chainId
+          const chainId = await ethereum.request({ method: "eth_chainId" });
+          setChainId(chainId);
+          // Re-fetch balance
+          const balance = await ethereum.request({ 
+            method: "eth_getBalance", 
+            params: [accounts[0], "latest"]
+          });
+          setBalance(parseInt(balance, 16).toString());
+          // Optionally, reset isAdmin if you check it on-chain
+          setIsAdmin(false);
         } else {
           setConnected(false);
           setAddress(null);
+          setBalance('0');
+          setChainId(null);
+          setIsAdmin(false);
         }
       });
       
@@ -141,6 +158,38 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       }
     };
   }, []);
+  
+  useEffect(() => {
+    if (!connected || !address) {
+      hasAttemptedRegister.current = null;
+    }
+  }, [connected, address]);
+  
+  useEffect(() => {
+    if (connected && address) {
+      if (hasAttemptedRegister.current === address) {
+        console.log('Registration already attempted for:', address);
+        return;
+      }
+      hasAttemptedRegister.current = address;
+      (async () => {
+        try {
+          console.log('Checking if user is registered (provider):', address);
+          const alreadyUser = await isUser(address);
+          console.log('Already user? (provider)', alreadyUser);
+          if (!alreadyUser) {
+            toast.info('Registering your account on-chain...');
+            await register();
+            toast.success('You are now registered as a user!');
+          }
+        } catch (err: any) {
+          toast.error('Failed to register user: ' + (err?.message || err));
+          console.error('Auto-registration error (provider):', err);
+          hasAttemptedRegister.current = null;
+        }
+      })();
+    }
+  }, [connected, address]);
   
   return (
     <WalletContext.Provider

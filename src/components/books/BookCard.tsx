@@ -8,13 +8,18 @@ import { Calendar } from 'lucide-react';
 interface BookCardProps {
   book: Book;
   onBorrow?: (bookId: string) => void;
+  borrowLoading?: boolean;
 }
 
-const BookCard: React.FC<BookCardProps> = ({ book, onBorrow }) => {
+const BookCard: React.FC<BookCardProps> = ({ book, onBorrow, borrowLoading }) => {
   const navigate = useNavigate();
   const { connected } = useWallet();
 
   const handleViewDetails = () => {
+    if (book.id === undefined || book.id === null || book.id === '' || book.id === 'undefined') {
+      console.warn('BookCard: Tried to view details for book with missing id:', book);
+      return;
+    }
     navigate(`/books/${book.id}`);
   };
 
@@ -61,6 +66,7 @@ const BookCard: React.FC<BookCardProps> = ({ book, onBorrow }) => {
             variant="outline" 
             size="sm" 
             onClick={handleViewDetails}
+            disabled={book.id === undefined || book.id === null || book.id === '' || book.id === 'undefined'}
           >
             Details
           </Button>
@@ -70,8 +76,9 @@ const BookCard: React.FC<BookCardProps> = ({ book, onBorrow }) => {
               size="sm" 
               onClick={handleBorrow} 
               className="ml-2"
+              disabled={borrowLoading}
             >
-              Borrow
+              {borrowLoading ? 'Borrowing...' : 'Borrow'}
             </Button>
           )}
         </div>

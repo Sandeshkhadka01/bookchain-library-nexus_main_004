@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Book, BookFormData } from '@/types/book';
+import { uploadFileToIPFS, uploadJSONToIPFS } from '@/services/pinataService';
+import { Label } from "@/components/ui/label";
 
 interface AddEditBookFormProps {
   book?: Book;
@@ -12,6 +14,8 @@ interface AddEditBookFormProps {
 
 const AddEditBookForm: React.FC<AddEditBookFormProps> = ({ book, onSubmit }) => {
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<BookFormData>({
     defaultValues: book ? {
       title: book.title,
@@ -43,35 +47,79 @@ const AddEditBookForm: React.FC<AddEditBookFormProps> = ({ book, onSubmit }) => 
     }
   };
 
+  const handleFormSubmit = async (data: BookFormData) => {
+    setUploadError(null);
+    let coverImageUrl = data.coverImage;
+    if (coverImageFile) {
+      setUploading(true);
+      try {
+        coverImageUrl = await uploadFileToIPFS(coverImageFile);
+        setValue('coverImage', coverImageUrl);
+      } catch (err) {
+        setUploadError('Failed to upload cover image to IPFS.');
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+    // Upload metadata to IPFS
+    setUploading(true);
+    try {
+      const metadata = {
+        title: data.title,
+        author: data.author,
+        description: data.description,
+        isbn: data.isbn,
+        genre: data.genre,
+        quantity: data.quantity,
+        coverImage: coverImageUrl
+      };
+      const metadataUrl = await uploadJSONToIPFS(metadata);
+      setUploading(false);
+      await onSubmit({ ...data, coverImage: coverImageUrl, metadataUrl });
+    } catch (err) {
+      setUploadError('Failed to upload book metadata to IPFS.');
+      setUploading(false);
+      return;
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div>
-        <Input {...register('title', { required: 'Title is required' })} placeholder="Title" />
+        <Label htmlFor="title">Title</Label>
+        <Input id="title" {...register('title', { required: 'Title is required' })} placeholder="Title" />
         {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
       </div>
       
       <div>
-        <Input {...register('author', { required: 'Author is required' })} placeholder="Author" />
+        <Label htmlFor="author">Author</Label>
+        <Input id="author" {...register('author', { required: 'Author is required' })} placeholder="Author" />
         {errors.author && <p className="text-red-500 text-sm">{errors.author.message}</p>}
       </div>
 
       <div>
-        <Textarea {...register('description', { required: 'Description is required' })} placeholder="Description" />
+        <Label htmlFor="description">Description</Label>
+        <Textarea id="description" {...register('description', { required: 'Description is required' })} placeholder="Description" />
         {errors.description && <p className="text-red-500 text-sm">{errors.description.message}</p>}
       </div>
 
       <div>
-        <Input {...register('isbn', { required: 'ISBN is required' })} placeholder="ISBN" />
+        <Label htmlFor="isbn">ISBN</Label>
+        <Input id="isbn" {...register('isbn', { required: 'ISBN is required' })} placeholder="ISBN" />
         {errors.isbn && <p className="text-red-500 text-sm">{errors.isbn.message}</p>}
       </div>
 
       <div>
-        <Input {...register('genre', { required: 'Genre is required' })} placeholder="Genre" />
+        <Label htmlFor="genre">Genre</Label>
+        <Input id="genre" {...register('genre', { required: 'Genre is required' })} placeholder="Genre" />
         {errors.genre && <p className="text-red-500 text-sm">{errors.genre.message}</p>}
       </div>
 
       <div>
+        <Label htmlFor="quantity">Quantity</Label>
         <Input 
+          id="quantity"
           type="number" 
           {...register('quantity', { 
             required: 'Quantity is required',
@@ -83,9 +131,10 @@ const AddEditBookForm: React.FC<AddEditBookFormProps> = ({ book, onSubmit }) => 
       </div>
 
       <div className="space-y-4">
-        <label className="text-sm font-medium">Cover Image</label>
+        <Label htmlFor="coverImageFile">Cover Image</Label>
         <div className="space-y-2">
           <Input 
+            id="coverImageFile"
             type="file" 
             accept="image/*" 
             onChange={handleFileChange} 
@@ -101,7 +150,9 @@ const AddEditBookForm: React.FC<AddEditBookFormProps> = ({ book, onSubmit }) => 
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="coverImage">Image URL</Label>
           <Input 
+            id="coverImage"
             {...register('coverImage', { required: 'Cover Image is required' })} 
             placeholder="Image URL" 
           />
@@ -120,8 +171,9 @@ const AddEditBookForm: React.FC<AddEditBookFormProps> = ({ book, onSubmit }) => 
         )}
       </div>
 
-      <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? 'Saving...' : book ? 'Update Book' : 'Add Book'}
+      {uploadError && <p className="text-red-500 text-sm">{uploadError}</p>}
+      <Button type="submit" disabled={isSubmitting || uploading} className="w-full">
+        {uploading ? 'Uploading Image...' : isSubmitting ? 'Saving...' : book ? 'Update Book' : 'Add Book'}
       </Button>
     </form>
   );

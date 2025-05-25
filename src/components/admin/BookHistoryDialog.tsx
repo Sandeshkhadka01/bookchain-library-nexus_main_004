@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Book, BorrowHistory } from '@/types/book';
-import { BlockchainService } from '@/services/mockBlockchain';
+import { getBorrowHistory } from '@/services/blockchainService';
 
 interface BookHistoryDialogProps {
   book: Book;
@@ -37,8 +37,10 @@ const BookHistoryDialog: React.FC<BookHistoryDialogProps> = ({
       
       setLoading(true);
       try {
-        const allHistory = await BlockchainService.getBorrowHistory();
-        const bookHistory = allHistory.filter(record => record.bookId === book.id);
+        const allHistory = await getBorrowHistory();
+        const bookHistory = allHistory.filter(record => 
+          record.bookId?.toString() === book.id?.toString()
+        );
         setHistory(bookHistory);
       } catch (error) {
         console.error('Error fetching book history:', error);
@@ -79,18 +81,24 @@ const BookHistoryDialog: React.FC<BookHistoryDialogProps> = ({
                 {history.map((record, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-mono text-xs">
-                      {record.borrower.slice(0, 6)}...{record.borrower.slice(-4)}
+                      {record.borrower
+                        ? `${record.borrower.slice(0, 6)}...${record.borrower.slice(-4)}`
+                        : "N/A"}
                     </TableCell>
                     <TableCell>
-                      {new Date(record.borrowDate).toLocaleDateString()}
+                      {record.borrowDate
+                        ? new Date(record.borrowDate).toLocaleDateString()
+                        : "N/A"}
                     </TableCell>
                     <TableCell>
-                      {record.returnDate 
-                        ? new Date(record.returnDate).toLocaleDateString() 
+                      {record.returnDate
+                        ? new Date(record.returnDate).toLocaleDateString()
                         : "Not returned"}
                     </TableCell>
                     <TableCell className="font-mono text-xs">
-                      {record.transactionHash.slice(0, 6)}...{record.transactionHash.slice(-4)}
+                      {record.transactionHash
+                        ? `${record.transactionHash.slice(0, 6)}...${record.transactionHash.slice(-4)}`
+                        : "N/A"}
                     </TableCell>
                   </TableRow>
                 ))}

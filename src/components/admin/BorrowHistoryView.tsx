@@ -31,9 +31,9 @@ const BorrowHistoryView: React.FC<BorrowHistoryViewProps> = ({
 
   // Filter history based on search term
   const filteredHistory = borrowHistory.filter(record =>
-    record.bookTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.borrower.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.transactionHash.toLowerCase().includes(searchTerm.toLowerCase())
+    (record.bookTitle && record.bookTitle.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (record.borrower && record.borrower.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (record.transactionHash && record.transactionHash.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -77,7 +77,9 @@ const BorrowHistoryView: React.FC<BorrowHistoryViewProps> = ({
                     <TableRow key={index}>
                       <TableCell className="font-medium">{record.bookTitle}</TableCell>
                       <TableCell className="font-mono text-xs">
-                        {record.borrower.slice(0, 6)}...{record.borrower.slice(-4)}
+                        {record.borrower
+                          ? `${record.borrower.slice(0, 6)}...${record.borrower.slice(-4)}`
+                          : "N/A"}
                       </TableCell>
                       <TableCell>
                         {new Date(record.borrowDate).toLocaleDateString()}
@@ -88,7 +90,9 @@ const BorrowHistoryView: React.FC<BorrowHistoryViewProps> = ({
                           : "Not returned"}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {record.transactionHash.slice(0, 6)}...{record.transactionHash.slice(-4)}
+                        {record.transactionHash
+                          ? `${record.transactionHash.slice(0, 6)}...${record.transactionHash.slice(-4)}`
+                          : "N/A"}
                       </TableCell>
                     </TableRow>
                   ))}

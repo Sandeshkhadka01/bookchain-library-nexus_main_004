@@ -33,10 +33,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   
   // Calculate statistics
   const totalBooks = books.length;
-  const availableBooks = books.filter(book => book.available).length;
-  const borrowedBooks = books.filter(book => !book.available).length;
+  const availableBooks = books.filter(book => book.availableCopies > 0).length;
+  const borrowedBooks = books.filter(book => book.availableCopies === 0).length;
   const totalTransactions = borrowHistory.length;
   const activeUsers = users.length;
+
+  // Enhanced library stats
+  const totalCopies = books.reduce((sum, b) => sum + (b.quantity || 0), 0);
+  const totalAvailableCopies = books.reduce((sum, b) => sum + (b.availableCopies || 0), 0);
+  const totalBorrowedCopies = totalCopies - totalAvailableCopies;
+
+  // Improved Active Borrowers logic
+  const activeBorrowers = useMemo(() => {
+    const borrowers = books
+      .filter(b => b.borrowers && b.borrowers.length > 0)
+      .flatMap(b => b.borrowers.map(br => br.address));
+    return new Set(borrowers).size;
+  }, [books]);
 
   // Calculate activity stats using memoization to prevent unnecessary recalculations
   const activityStats = useMemo(() => 
@@ -58,6 +71,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     );
   }, [borrowHistory]);
 
+  // New Books Added: use highest 5 IDs as proxy for 'new'
+  const newBooksAdded = useMemo(() => {
+    const sorted = [...books].sort((a, b) => Number(b.id) - Number(a.id));
+    return sorted.slice(0, 5).length;
+  }, [books]);
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">Dashboard Overview</h2>
@@ -78,12 +97,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground space-y-1">
                   <p className="flex items-center justify-between">
-                    Available <span>{availableBooks}</span>
+                    Total Copies <span>{totalCopies}</span>
                   </p>
                   <p className="flex items-center justify-between">
-                    Borrowed <span>{borrowedBooks}</span>
+                    Available Copies <span>{totalAvailableCopies}</span>
+                  </p>
+                  <p className="flex items-center justify-between">
+                    Borrowed Copies <span>{totalBorrowedCopies}</span>
                   </p>
                 </div>
               </CardContent>
@@ -100,7 +122,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <CardContent>
                 <div className="text-sm text-muted-foreground">
                   <p className="flex items-center justify-between">
-                    Active Borrowers <span>{new Set(books.filter(b => !b.available).map(b => b.borrower)).size}</span>
+                    Active Borrowers <span>{activeBorrowers}</span>
                   </p>
                   <p className="flex items-center justify-between">
                     Total Transactions <span>{totalTransactions}</span>
@@ -167,7 +189,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm">New Books Added</span>
-                    <span className="font-medium">{books.filter(b => parseInt(b.id) > 5).length}</span>
+                    <span className="font-medium">{newBooksAdded}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Total Transactions</span>

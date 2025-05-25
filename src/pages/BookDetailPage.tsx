@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Book } from '@/types/book';
-import { BlockchainService } from '@/services/mockBlockchain';
+// Removed: import { BlockchainService } from '@/services/mockBlockchain';
+import * as BlockchainService from '@/services/blockchainService';
 import BookDetail from '@/components/books/BookDetail';
 import { ArrowLeft } from 'lucide-react';
 
@@ -14,18 +15,26 @@ const BookDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchBook = async () => {
-    if (!id) return;
-    
+    console.log('BookDetailPage id:', id);
+    if (!id || id === 'undefined' || isNaN(Number(id))) {
+      setError("Invalid or missing book ID");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const bookData = await BlockchainService.getBook(id);
-      if (!bookData) {
-        setError("Book not found");
+      console.log('BookDetailPage bookData:', bookData);
+      if (!bookData || bookData.id === undefined || bookData.id === null || bookData.id === '' || bookData.id === 'undefined') {
+        setError("Book not found or missing ID");
+        setBook(null);
         return;
       }
       setBook(bookData);
-    } catch (err) {
-      setError("Error fetching book details");
+      setError(null);
+    } catch (err: any) {
+      setError("Book not found or contract call failed. " + (err?.reason || err?.message || ''));
+      setBook(null);
       console.error(err);
     } finally {
       setLoading(false);

@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Book } from '@/types/book';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useWallet } from '@/hooks/use-wallet';
 import { Calendar, BookOpen, User, Archive } from 'lucide-react';
-import { BlockchainService } from '@/services/mockBlockchain';
+import { borrowBook, returnBook } from '@/services/blockchainService';
 import { toast } from 'sonner';
 
 interface BookDetailProps {
@@ -14,20 +14,26 @@ interface BookDetailProps {
 
 const BookDetail: React.FC<BookDetailProps> = ({ book, onBookUpdate }) => {
   const { connected, address } = useWallet();
+  const [loading, setLoading] = useState(false);
+  const [txHash, setTxHash] = useState<string | null>(null);
 
   const handleBorrow = async () => {
     if (!connected || !address) {
       toast.error("Please connect your wallet first");
       return;
     }
-
+    setLoading(true);
+    setTxHash(null);
     try {
-      await BlockchainService.borrowBook(book.id, address);
+      const hash = await borrowBook(book.id);
+      setTxHash(hash);
       onBookUpdate();
       toast.success("Book borrowed successfully");
     } catch (error) {
       console.error("Error borrowing book:", error);
       toast.error("Failed to borrow book");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -36,14 +42,18 @@ const BookDetail: React.FC<BookDetailProps> = ({ book, onBookUpdate }) => {
       toast.error("Please connect your wallet first");
       return;
     }
-
+    setLoading(true);
+    setTxHash(null);
     try {
-      await BlockchainService.returnBook(book.id, address);
+      const hash = await returnBook(book.id);
+      setTxHash(hash);
       onBookUpdate();
       toast.success("Book returned successfully");
     } catch (error) {
       console.error("Error returning book:", error);
       toast.error("Failed to return book");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,16 +104,20 @@ const BookDetail: React.FC<BookDetailProps> = ({ book, onBookUpdate }) => {
           
           <div className="mt-8 flex space-x-4">
             {isAvailable && connected && !isUserBorrower ? (
-              <Button onClick={handleBorrow}>
-                <BookOpen className="mr-2 h-4 w-4" />
-                Borrow
+              <Button onClick={handleBorrow} disabled={loading}>
+                {loading ? 'Borrowing...' : (<><BookOpen className="mr-2 h-4 w-4" />Borrow</>)}
               </Button>
             ) : isUserBorrower ? (
-              <Button onClick={handleReturn}>
-                Return Book
+              <Button onClick={handleReturn} disabled={loading}>
+                {loading ? 'Returning...' : 'Return Book'}
               </Button>
             ) : null}
           </div>
+          {txHash && (
+            <div className="mt-4 text-xs text-library-muted">
+              Transaction: <a href={`https://etherscan.io/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline">{txHash.slice(0, 8)}...{txHash.slice(-6)}</a>
+            </div>
+          )}
         </div>
       </div>
     </Card>

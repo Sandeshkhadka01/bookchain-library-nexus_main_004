@@ -3,7 +3,9 @@ import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "@/lib/utils"
 
-const Tabs = TabsPrimitive.Root
+const Tabs = (props: React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root>) => (
+  <TabsPrimitive.Root {...props} />
+)
 
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
@@ -15,6 +17,7 @@ const TabsList = React.forwardRef<
       "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
       className
     )}
+    role="tablist"
     {...props}
   />
 ))
@@ -30,6 +33,9 @@ const TabsTrigger = React.forwardRef<
       "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
       className
     )}
+    role="tab"
+    aria-selected={props['data-state'] === 'active'}
+    tabIndex={props['data-state'] === 'active' ? 0 : -1}
     {...props}
   />
 ))
@@ -45,6 +51,8 @@ const TabsContent = React.forwardRef<
       "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       className
     )}
+    role="tabpanel"
+    tabIndex={0}
     {...props}
   />
 ))

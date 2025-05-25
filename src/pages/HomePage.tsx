@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { BookOpen, ArrowRight, BookMarked, Shield, Database, Info } from 'lucide-react';
 import { useWallet } from '@/hooks/use-wallet';
 import { Book } from '@/types/book';
-import { BlockchainService } from '@/services/mockBlockchain';
+// Removed: import { BlockchainService } from '@/services/mockBlockchain';
+import * as BlockchainService from '@/services/blockchainService';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const fetchLatestBooks = async () => {
       try {
-        const books = await BlockchainService.getBooks();
+        const { books } = await BlockchainService.getBooks();
         // Sort by newest (using ID as proxy since higher IDs are assumed to be newer)
         const sorted = [...books].sort((a, b) => parseInt(b.id) - parseInt(a.id));
         setLatestBooks(sorted.slice(0, 3)); // Get the 3 most recent books
@@ -28,6 +29,10 @@ const HomePage: React.FC = () => {
 
     fetchLatestBooks();
   }, []);
+
+  const validBooks = latestBooks.filter(
+    (book) => book.id && book.title && book.coverImage
+  );
 
   return (
     <div className="animate-fade-in">
@@ -79,7 +84,12 @@ const HomePage: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {latestBooks.map((book) => (
+            {validBooks.map((book) => {
+              if (!book.id || book.id === 'undefined') {
+                console.warn('Book missing id:', book);
+                return null;
+              }
+              return (
               <div key={book.id} className="book-card stagger-item">
                 <div className="relative h-48 overflow-hidden rounded-t-lg">
                   <img 
@@ -115,7 +125,8 @@ const HomePage: React.FC = () => {
                   </Button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

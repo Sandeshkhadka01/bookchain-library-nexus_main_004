@@ -10,13 +10,16 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Book, BorrowHistory } from '@/types/book';
-import { BlockchainService } from '@/services/mockBlockchain';
+// Removed: import { BlockchainService } from '@/services/mockBlockchain';
+import * as BlockchainService from '@/services/blockchainService';
+import { toast } from 'sonner';
 
 const UserPage: React.FC = () => {
   const { connected, address } = useWallet();
   const [borrowedBooks, setBorrowedBooks] = useState<Book[]>([]);
   const [borrowHistory, setBorrowHistory] = useState<BorrowHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [returningBookId, setReturningBookId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -36,6 +39,7 @@ const UserPage: React.FC = () => {
           setBorrowHistory(history);
         } catch (error) {
           console.error("Error fetching user data:", error);
+          toast.error("Failed to fetch user data");
         } finally {
           setLoading(false);
         }
@@ -47,9 +51,9 @@ const UserPage: React.FC = () => {
 
   const handleReturnBook = async (bookId: string) => {
     if (!connected || !address) return;
-    
+    setReturningBookId(bookId);
     try {
-      await BlockchainService.returnBook(bookId, address);
+      await BlockchainService.returnBook(bookId);
       // Update the UI after returning
       setBorrowedBooks(prev => prev.filter(book => book.id !== bookId));
       
@@ -62,8 +66,12 @@ const UserPage: React.FC = () => {
       
       const history = await BlockchainService.getUserBorrowHistory(address);
       setBorrowHistory(history);
+      toast.success("Book returned successfully");
     } catch (error) {
       console.error("Error returning book:", error);
+      toast.error("Failed to return book");
+    } finally {
+      setReturningBookId(null);
     }
   };
 
@@ -124,7 +132,9 @@ const UserPage: React.FC = () => {
                           <h3 className="font-semibold text-library-text line-clamp-1">{book.title}</h3>
                           <p className="text-sm text-library-muted mb-2">{book.author}</p>
                           <p className="text-xs text-library-muted">
-                            Borrowed on: {book.borrowDate ? new Date(book.borrowDate).toLocaleDateString() : 'Unknown date'}
+                            Borrowed on: {book.borrowers && book.borrowers.length > 0 
+                              ? new Date(book.borrowers[0].borrowDate).toLocaleDateString() 
+                              : 'Unknown date'}
                           </p>
                         </div>
                         <div className="mt-4">
@@ -132,8 +142,9 @@ const UserPage: React.FC = () => {
                             onClick={() => handleReturnBook(book.id)}
                             size="sm"
                             className="w-full"
+                            disabled={returningBookId === book.id}
                           >
-                            Return Book
+                            {returningBookId === book.id ? 'Returning...' : 'Return Book'}
                           </Button>
                         </div>
                       </div>
@@ -174,8 +185,8 @@ const UserPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {borrowHistory.map((record, index) => (
-                        <tr key={index} className="border-b">
+                      {borrowHistory.map((record) => (
+                        <tr key={record.transactionHash} className="border-b">
                           <td className="px-4 py-3 text-sm">{record.bookTitle}</td>
                           <td className="px-4 py-3 text-sm">
                             {new Date(record.borrowDate).toLocaleDateString()}
@@ -186,7 +197,14 @@ const UserPage: React.FC = () => {
                               : "Not returned"}
                           </td>
                           <td className="px-4 py-3 text-sm font-mono">
+                            <a
+                              href={`https://etherscan.io/tx/${record.transactionHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline"
+                            >
                             {record.transactionHash.slice(0, 6)}...{record.transactionHash.slice(-4)}
+                            </a>
                           </td>
                         </tr>
                       ))}
