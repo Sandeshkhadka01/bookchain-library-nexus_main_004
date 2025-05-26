@@ -1,6 +1,6 @@
-
 import React from 'react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Github, Home, Library, Info, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   return (
@@ -11,22 +11,40 @@ const Footer: React.FC = () => {
             <BookOpen className="h-5 w-5 text-library-primary mr-2" />
             <span className="text-library-text font-semibold">DecentraLib</span>
           </div>
-          
-          <div className="text-sm text-library-muted">
-            &copy; {new Date().getFullYear()} DecentraLib. Built on blockchain technology.
+
+          {/* Navigation Buttons */}
+          <div className="flex items-center space-x-4 mb-4 md:mb-0">
+            <Link to="/" className="flex items-center text-library-muted hover:text-library-primary transition-colors">
+              <Home className="h-4 w-4 mr-1" /> Home
+            </Link>
+            <Link to="/books" className="flex items-center text-library-muted hover:text-library-primary transition-colors">
+              <Library className="h-4 w-4 mr-1" /> Browse
+            </Link>
+            <Link to="/about" className="flex items-center text-library-muted hover:text-library-primary transition-colors">
+              <Info className="h-4 w-4 mr-1" /> About
+            </Link>
+            <Link to="/admin" className="flex items-center text-library-muted hover:text-library-primary transition-colors">
+              <Settings className="h-4 w-4 mr-1" /> Admin
+            </Link>
           </div>
 
           <div className="flex items-center space-x-4 mt-4 md:mt-0">
-            <a href="#" className="text-library-muted hover:text-library-primary transition-colors">
+            <Link to="/terms" className="text-library-muted hover:text-library-primary transition-colors">
               Terms
-            </a>
-            <a href="#" className="text-library-muted hover:text-library-primary transition-colors">
+            </Link>
+            <Link to="/privacy" className="text-library-muted hover:text-library-primary transition-colors">
               Privacy
-            </a>
-            <a href="#" className="text-library-muted hover:text-library-primary transition-colors">
+            </Link>
+            <Link to="/documentation" className="text-library-muted hover:text-library-primary transition-colors">
               Documentation
+            </Link>
+            <a href="https://github.com/Sandeshkhadka01" target="_blank" rel="noopener noreferrer" className="flex items-center text-library-muted hover:text-library-primary transition-colors">
+              <Github className="h-4 w-4 mr-1" /> GitHub
             </a>
           </div>
+        </div>
+        <div className="text-sm text-library-muted text-center mt-6">
+          &copy; {new Date().getFullYear()} DecentraLib. Built on blockchain technology.
         </div>
       </div>
     </footer>
